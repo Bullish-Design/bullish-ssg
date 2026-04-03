@@ -74,6 +74,7 @@ def test_check_links_stub_returns_success() -> None:
 
 
 def test_deploy_stub_returns_success() -> None:
-    """Test that deploy stub returns success."""
+    """Test that deploy requires project configuration."""
     result = runner.invoke(app, ["deploy", "--dry-run"])
-    assert result.exit_code == 0
+    assert result.exit_code == 1
+    assert "No configuration found" in result.output

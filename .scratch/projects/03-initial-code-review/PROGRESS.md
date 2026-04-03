@@ -9,3 +9,6 @@
 - [x] Audit intern Step 6/7 attempt
 - [x] Run Step 6/7-focused test command and capture failures
 - [x] Write STEP_6_7_CODE_REVIEW.md
+- [x] Audit intern Step 8/9 attempt
+- [x] Run Step 8/9-focused test commands and capture failures
+- [x] Write STEP_8_9_CODE_REVIEW.md

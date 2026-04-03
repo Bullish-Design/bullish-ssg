@@ -491,6 +491,7 @@ Write tests first:
 - command construction test for generate/serve invocation args.
 - subprocess failure propagates meaningful error.
 - dry-run mode avoids execution and prints expected command.
+- integration tests should run against committed fixture workspaces under `tests/fixtures/` (avoid inline `write_text` setup for sample docs/config content).
 
 For integration, use command mocking if Kiln is unavailable in CI.
 
@@ -544,6 +545,7 @@ Write tests first:
 - deploy blocked when preflight validation fails.
 - dry-run does not perform side effects.
 - gh adapter command invocation correctness.
+- deploy integration tests should use committed fixture workspaces and verify that `deploy --dry-run` works without requiring external binaries (`kiln`, `gh`) to be installed.
 
 Run:
 

@@ -7,6 +7,9 @@ import typer
 
 from bullish_ssg.config.loader import find_config_file, load_config
 from bullish_ssg.config.schema import BullishConfig
+from bullish_ssg.deploy.branch_pages import BranchPagesDeployer
+from bullish_ssg.deploy.gh_pages import GHPagesDeployer
+from bullish_ssg.deploy.preflight import DeployPreflight
 from bullish_ssg.render.kiln import BuildManager, KilnError
 from bullish_ssg.vault_link.resolver import VaultResolutionError, resolve_vault_path
 from bullish_ssg.validate.rules import ValidationRunner, WikilinkValidator
@@ -211,12 +214,57 @@ def deploy(
     dry_run: bool = typer.Option(False, "--dry-run", help="Show what would be deployed"),
 ) -> None:
     """Deploy the site to GitHub Pages."""
-    _load_config_if_present()
-    typer.echo("Deploying site...")
-    if dry_run:
-        typer.echo("[DRY RUN] Would run: gh pages deploy")
+    config = _load_config_if_present()
+    if config is None:
+        typer.echo("Error: No configuration found. Run 'bullish-ssg init' first.", err=True)
+        raise typer.Exit(code=1)
+
+    # Run preflight checks
+    typer.echo("Running preflight checks...")
+    preflight = DeployPreflight(config)
+    preflight_result = preflight.run(dry_run=dry_run)
+
+    if not preflight_result.passed:
+        typer.echo("Preflight checks failed:", err=True)
+        for error in preflight_result.errors:
+            typer.echo(f"  - {error}", err=True)
+        raise typer.Exit(code=1)
+
+    typer.echo(f"✓ Preflight passed: {', '.join(preflight_result.checks)}")
+
+    # Select deploy adapter based on config
+    site_dir = Path(config.deploy.site_dir)
+    deploy_method = config.deploy.method
+
+    if deploy_method == "gh-pages":
+        adapter = GHPagesDeployer(config.deploy)
+        deploy_url = adapter.get_deploy_url()
+    elif deploy_method == "branch":
+        adapter = BranchPagesDeployer(config.deploy)
+        deploy_url = adapter.get_deploy_url()
     else:
-        typer.echo("Deployment completed")
+        typer.echo(f"Error: Unknown deploy method: {deploy_method}", err=True)
+        raise typer.Exit(code=1)
+
+    # Execute deploy
+    try:
+        result = adapter.deploy(site_dir=site_dir, dry_run=dry_run)
+
+        if dry_run:
+            typer.echo(result.stdout)
+        else:
+            if result.success:
+                typer.echo(f"✓ Deployed successfully to {deploy_url}")
+                if result.stdout:
+                    typer.echo(result.stdout)
+            else:
+                typer.echo(f"Deploy failed with code {result.returncode}", err=True)
+                if result.stderr:
+                    typer.echo(result.stderr, err=True)
+                raise typer.Exit(code=1)
+    except Exception as exc:
+        typer.echo(f"Deploy error: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
 
 
 def main() -> None:

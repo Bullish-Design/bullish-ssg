@@ -1,0 +1,17 @@
+[site]
+name = "Deploy GH Fixture"
+url = "https://example.com/"
+
+[content]
+source_dir = "docs"
+output_dir = "site"
+
+[vault]
+mode = "direct"
+link_path = "docs"
+
+[deploy]
+method = "gh-pages"
+site_dir = "site"
+branch = "main"
+pages_branch = "gh-pages"
