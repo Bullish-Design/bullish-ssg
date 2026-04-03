@@ -1,6 +1,5 @@
 """Vault symlink manager for creating and repairing symlinks."""
 
-import errno
 import os
 from pathlib import Path
 from typing import Optional

@@ -1,0 +1,6 @@
+[site]
+name = "Test"
+url = "https://example.com/"
+
+[vault]
+mode = "symlink"

@@ -56,11 +56,17 @@ Primary reference: `../01-zensical-github-pages/IMPLEMENTATION_OVERVIEW.md`
 - If a step fails tests, do not proceed; fix failures first.
 - Use small commits: one step per commit whenever feasible.
 - If you hit 3 failed attempts on one blocker, create `ISSUE_01.md` (or next number) in this project directory and document attempts.
+- Use fixture-driven tests: keep canonical sample files under `tests/fixtures/` and avoid writing markdown/config sample content inline inside test functions.
 
 Execution style expected from intern:
 - Test-driven development where practical: write/adjust failing tests first, then implement, then pass.
 - Keep code changes focused on the current step.
 - Prefer deterministic behavior and explicit errors over hidden fallbacks.
+
+Fixture policy:
+- Store sample markdown, TOML, and vault trees under `tests/fixtures/`.
+- Tests may still use `tmp_path` for isolated runtime state (symlinks, copied fixture trees, temporary working dirs).
+- Do not generate test sample content via `write_text(...)` in test bodies unless the sample cannot be represented as a reusable fixture.
 
 ## 2) Definition of Done
 
@@ -260,6 +266,7 @@ Write tests first:
 - repair mode updates incorrect symlink to new target.
 
 Use temporary directories/fixtures for filesystem tests.
+Base file content should come from `tests/fixtures/` and be copied into temp workspaces as needed.
 
 Run:
 
@@ -304,6 +311,7 @@ Write tests first:
 - frontmatter parses valid input correctly.
 - malformed frontmatter yields actionable error.
 - files without frontmatter still parse with defaults.
+- tests consume real fixture markdown files (valid, invalid YAML, and no frontmatter cases).
 
 Run:
 
@@ -701,6 +709,7 @@ devenv shell -- pytest tests/ -q
 Pass criteria:
 - All step-level tests and full suite pass.
 - No flaky tests across two consecutive runs.
+- Fixture coverage exists for docs-only, docs+blog, and symlink scenarios without inline sample file generation in tests.
 
 ## 18) Step 14: Documentation, Dry Run, and Handoff Checklist
 
@@ -876,3 +885,4 @@ Final review checklist:
 - [ ] Guide and CLI help output match implemented behavior.
 - [ ] Symlink mode validated with a real external vault path.
 - [ ] Maintainer can reproduce quickstart in a clean environment.
+- [ ] Tests use canonical files from `tests/fixtures/` rather than inline-generated sample markdown/config content.

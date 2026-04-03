@@ -1,0 +1,24 @@
+[site]
+name = "Full Test Site"
+url = "https://example.com/"
+description = "A test site"
+
+[content]
+source_dir = "content"
+output_dir = "public"
+blog_dirs = ["blog", "posts"]
+default_type = "doc"
+
+[vault]
+mode = "direct"
+link_path = "docs"
+
+[validation]
+require_date_for_posts = true
+fail_on_broken_links = true
+check_heading_anchors = true
+
+[deploy]
+method = "gh-pages"
+branch = "main"
+pages_branch = "gh-pages"

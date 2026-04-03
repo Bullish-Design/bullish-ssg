@@ -1,6 +1,5 @@
 """Vault path resolver for symlink and direct modes."""
 
-import os
 from pathlib import Path
 from typing import Optional
 
@@ -65,16 +64,24 @@ class VaultResolver:
         In symlink mode, the link_path should be a symlink pointing to source_path.
         """
         link_path = self._resolve_path(self.config.link_path)
+        expected_source = self._resolve_path(self.config.source_path) if self.config.source_path is not None else None
 
-        if not link_path.exists():
+        if expected_source is not None and not expected_source.exists():
             raise VaultResolutionError(
-                f"Symlink does not exist: {link_path}\n  Run: bullish-ssg link-vault {self.config.source_path}"
+                f"Configured source_path does not exist: {expected_source}\n"
+                "  Update config.vault.source_path or run link-vault with a valid target"
             )
 
         if not link_path.is_symlink():
+            if link_path.exists():
+                raise VaultResolutionError(
+                    f"Expected symlink at {link_path}, but found {self._describe_path(link_path)}\n"
+                    f"  Either remove this path or run link-vault with --force"
+                )
+
             raise VaultResolutionError(
-                f"Expected symlink at {link_path}, but found {self._describe_path(link_path)}\n"
-                f"  Either remove this path or run link-vault with --force"
+                f"Symlink does not exist: {link_path}\n"
+                f"  Run: bullish-ssg link-vault {self.config.source_path}"
             )
 
         # Resolve the symlink target
@@ -91,6 +98,14 @@ class VaultResolver:
         if not target.is_dir():
             raise VaultResolutionError(
                 f"Symlink target is not a directory: {target}\n  Expected a directory containing markdown files"
+            )
+
+        if expected_source is not None and target != expected_source.resolve():
+            raise VaultResolutionError(
+                f"Symlink target mismatch: {link_path}\n"
+                f"  Expected: {expected_source.resolve()}\n"
+                f"  Actual:   {target}\n"
+                "  Run link-vault with --repair to update it"
             )
 
         return target

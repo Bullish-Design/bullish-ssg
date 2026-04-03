@@ -4,7 +4,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional, Self
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import AliasChoices, BaseModel, Field, field_validator, model_validator
 
 
 class VaultMode(str, Enum):
@@ -18,9 +18,14 @@ class SiteConfig(BaseModel):
     """Site configuration section."""
 
     url: str = Field(..., description="Base URL with trailing slash")
-    title: str = Field(..., description="Site title")
+    name: str = Field(..., description="Site name/title", validation_alias=AliasChoices("name", "title"))
     description: Optional[str] = Field(None, description="Site description")
     author: Optional[str] = Field(None, description="Default author")
+
+    @property
+    def title(self) -> str:
+        """Backward-compatible alias for site name."""
+        return self.name
 
     @field_validator("url")
     @classmethod
@@ -36,8 +41,16 @@ class SiteConfig(BaseModel):
 class ContentConfig(BaseModel):
     """Content configuration section."""
 
-    source_dir: Path = Field(Path("docs"), description="Content source directory")
-    output_dir: Path = Field(Path("site"), description="Build output directory")
+    source_dir: Path = Field(
+        Path("docs"),
+        description="Content source directory",
+        validation_alias=AliasChoices("source_dir", "vault_dir"),
+    )
+    output_dir: Path = Field(
+        Path("site"),
+        description="Build output directory",
+        validation_alias=AliasChoices("output_dir", "site_dir"),
+    )
     ignore_patterns: list[str] = Field(
         default_factory=lambda: [".obsidian/**", "templates/**", "_drafts/**"],
         description="Patterns to ignore during discovery",
@@ -46,7 +59,7 @@ class ContentConfig(BaseModel):
         default_factory=lambda: ["blog", "posts"],
         description="Directories that contain blog posts",
     )
-    default_type: str = Field("page", description="Default content type")
+    default_type: str = Field("doc", description="Default content type")
 
 
 class VaultConfig(BaseModel):
@@ -77,7 +90,8 @@ class DeployConfig(BaseModel):
 
     method: str = Field("gh-pages", description="Deploy method")
     site_dir: Path = Field(Path("site"), description="Site output directory")
-    branch: str = Field("gh-pages", description="Target branch for deployment")
+    branch: str = Field("main", description="Source branch for deployment triggers")
+    pages_branch: str = Field("gh-pages", description="Target branch for branch-based deployment")
 
 
 class HookConfig(BaseModel):

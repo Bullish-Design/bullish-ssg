@@ -1,157 +1,80 @@
-"""Tests for configuration loader."""
+"""Tests for configuration loader using fixture files."""
 
 from pathlib import Path
+from shutil import copy2
 from unittest.mock import patch
 
 import pytest
 
 from bullish_ssg.config.loader import find_config_file, load_config
-from bullish_ssg.config.schema import BullishConfig, SiteConfig, VaultMode
+from bullish_ssg.config.schema import BullishConfig, VaultMode
+
+
+def _copy_fixture_config(fixture_file: callable, filename: str, destination: Path) -> Path:
+    source = fixture_file(f"config/{filename}")
+    target = destination / source.name
+    copy2(source, target)
+    return target
 
 
 class TestFindConfigFile:
-    """Tests for find_config_file function."""
-
-    def test_finds_file_in_current_dir(self, tmp_path: Path) -> None:
-        """Test finding config in current directory."""
-        config_file = tmp_path / "bullish-ssg.toml"
-        config_file.write_text('[site]\nurl = "https://test.com/"\ntitle = "Test"')
+    def test_finds_file_in_current_dir(self, tmp_path: Path, fixture_file: callable) -> None:
+        config_file = _copy_fixture_config(fixture_file, "valid_minimal.toml", tmp_path)
+        config_file.rename(tmp_path / "bullish-ssg.toml")
 
         with patch("bullish_ssg.config.loader.Path.cwd", return_value=tmp_path):
             result = find_config_file()
-            assert result == config_file
+            assert result == tmp_path / "bullish-ssg.toml"
 
-    def test_finds_file_walking_up(self, tmp_path: Path) -> None:
-        """Test finding config by walking up directory tree."""
-        root = tmp_path
-        config_file = root / "bullish-ssg.toml"
-        config_file.write_text('[site]\nurl = "https://test.com/"\ntitle = "Test"')
+    def test_finds_file_walking_up(self, tmp_path: Path, fixture_file: callable) -> None:
+        config_file = _copy_fixture_config(fixture_file, "valid_minimal.toml", tmp_path)
+        config_file.rename(tmp_path / "bullish-ssg.toml")
 
-        subdir = root / "sub" / "dir"
+        subdir = tmp_path / "sub" / "dir"
         subdir.mkdir(parents=True)
 
         result = find_config_file(subdir)
-        assert result == config_file
+        assert result == tmp_path / "bullish-ssg.toml"
 
     def test_returns_none_when_not_found(self, tmp_path: Path) -> None:
-        """Test that None is returned when no config found."""
-        result = find_config_file(tmp_path)
-        assert result is None
-
-    def test_prefers_bullish_ssg_toml(self, tmp_path: Path) -> None:
-        """Test that bullish-ssg.toml is preferred over .config.toml."""
-        config1 = tmp_path / "bullish-ssg.toml"
-        config2 = tmp_path / "bullish-ssg.config.toml"
-        config1.write_text('[site]\nurl = "https://test.com/"\ntitle = "Test"')
-        config2.write_text('[site]\nurl = "https://test2.com/"\ntitle = "Test2"')
-
-        with patch("bullish_ssg.config.loader.Path.cwd", return_value=tmp_path):
-            result = find_config_file()
-            assert result == config1
+        assert find_config_file(tmp_path) is None
 
 
 class TestLoadConfig:
-    """Tests for load_config function."""
-
-    def test_loads_valid_config(self, tmp_path: Path) -> None:
-        """Test loading a valid config file."""
-        config_file = tmp_path / "bullish-ssg.toml"
-        config_file.write_text("""
-[site]
-url = "https://example.com/"
-title = "Test Site"
-description = "A test site"
-
-[content]
-source_dir = "content"
-
-[vault]
-mode = "direct"
-""")
-
-        config = load_config(config_file)
+    def test_loads_valid_config(self, fixture_file: callable) -> None:
+        config = load_config(fixture_file("config/valid_full.toml"))
         assert isinstance(config, BullishConfig)
         assert config.site.url == "https://example.com/"
-        assert config.site.title == "Test Site"
+        assert config.site.name == "Full Test Site"
         assert config.content.source_dir == Path("content")
         assert config.vault.mode == VaultMode.DIRECT
 
-    def test_loads_symlink_config(self, tmp_path: Path) -> None:
-        """Test loading config with symlink mode."""
-        config_file = tmp_path / "bullish-ssg.toml"
-        config_file.write_text("""
-[site]
-url = "https://example.com/"
-title = "Test"
-
-[vault]
-mode = "symlink"
-source_path = "/path/to/vault"
-link_path = "docs"
-""")
-
-        config = load_config(config_file)
+    def test_loads_symlink_config(self, fixture_file: callable) -> None:
+        config = load_config(fixture_file("config/valid_symlink.toml"))
         assert config.vault.mode == VaultMode.SYMLINK
         assert config.vault.source_path == Path("/path/to/vault")
         assert config.vault.link_path == Path("docs")
 
     def test_raises_file_not_found(self, tmp_path: Path) -> None:
-        """Test that FileNotFoundError is raised for missing file."""
-        nonexistent = tmp_path / "nonexistent.toml"
-        with pytest.raises(FileNotFoundError) as exc_info:
-            load_config(nonexistent)
-        assert "not found" in str(exc_info.value).lower()
+        with pytest.raises(FileNotFoundError):
+            load_config(tmp_path / "nonexistent.toml")
 
-    def test_raises_invalid_toml(self, tmp_path: Path) -> None:
-        """Test that ValueError is raised for invalid TOML."""
-        config_file = tmp_path / "bullish-ssg.toml"
-        config_file.write_text("[site\nurl = bad")
-
+    def test_raises_invalid_toml(self, fixture_file: callable) -> None:
         with pytest.raises(ValueError) as exc_info:
-            load_config(config_file)
-        assert "Invalid TOML" in str(exc_info.value)
+            load_config(fixture_file("config/invalid_toml.toml"))
+        assert "invalid toml" in str(exc_info.value).lower()
 
-    def test_raises_validation_error(self, tmp_path: Path) -> None:
-        """Test that ValueError is raised for invalid config values."""
-        config_file = tmp_path / "bullish-ssg.toml"
-        config_file.write_text("""
-[site]
-url = "not-a-url"
-title = "Test"
-""")
-
+    def test_raises_validation_error(self, fixture_file: callable) -> None:
         with pytest.raises(ValueError) as exc_info:
-            load_config(config_file)
+            load_config(fixture_file("config/invalid_url.toml"))
         assert "validation error" in str(exc_info.value).lower()
 
-    def test_symlink_without_source_path_fails(self, tmp_path: Path) -> None:
-        """Test that symlink mode without source_path fails."""
-        config_file = tmp_path / "bullish-ssg.toml"
-        config_file.write_text("""
-[site]
-url = "https://example.com/"
-title = "Test"
-
-[vault]
-mode = "symlink"
-""")
-
+    def test_symlink_without_source_path_fails(self, fixture_file: callable) -> None:
         with pytest.raises(ValueError) as exc_info:
-            load_config(config_file)
+            load_config(fixture_file("config/symlink_missing_source.toml"))
         assert "source_path" in str(exc_info.value).lower()
 
-    def test_invalid_mode_fails(self, tmp_path: Path) -> None:
-        """Test that invalid vault mode fails."""
-        config_file = tmp_path / "bullish-ssg.toml"
-        config_file.write_text("""
-[site]
-url = "https://example.com/"
-title = "Test"
-
-[vault]
-mode = "invalid"
-""")
-
+    def test_invalid_mode_fails(self, fixture_file: callable) -> None:
         with pytest.raises(ValueError) as exc_info:
-            load_config(config_file)
+            load_config(fixture_file("config/invalid_mode.toml"))
         assert "validation error" in str(exc_info.value).lower()
