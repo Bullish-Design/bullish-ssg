@@ -58,12 +58,12 @@ Primary reference: `../01-zensical-github-pages/IMPLEMENTATION_OVERVIEW.md`
 - If you hit 3 failed attempts on one blocker, create `ISSUE_01.md` (or next number) in this project directory and document attempts.
 - Use fixture-driven tests: keep canonical sample files under `tests/fixtures/` and avoid writing markdown/config sample content inline inside test functions.
 
-Execution style expected from intern:
+### Execution style expected from intern:
 - Test-driven development where practical: write/adjust failing tests first, then implement, then pass.
 - Keep code changes focused on the current step.
 - Prefer deterministic behavior and explicit errors over hidden fallbacks.
 
-Fixture policy:
+### Fixture policy:
 - Store sample markdown, TOML, and vault trees under `tests/fixtures/`.
 - Tests may still use `tmp_path` for isolated runtime state (symlinks, copied fixture trees, temporary working dirs).
 - Do not generate test sample content via `write_text(...)` in test bodies unless the sample cannot be represented as a reusable fixture.
