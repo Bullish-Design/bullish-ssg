@@ -2,7 +2,7 @@
 
 import re
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Optional
 
@@ -119,6 +119,9 @@ class ContentClassifier:
 
         if isinstance(date_value, datetime):
             return date_value
+
+        if isinstance(date_value, date):
+            return datetime.combine(date_value, datetime.min.time())
 
         if isinstance(date_value, str):
             formats = [

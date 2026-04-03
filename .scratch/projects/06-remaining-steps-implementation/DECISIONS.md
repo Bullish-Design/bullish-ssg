@@ -4,3 +4,4 @@
 - Step 10 scaffolding uses additive/idempotent patchers and avoids destructive rewrites; existing files are merged by adding missing defaults/snippets only.
 - `link-vault` now self-bootstraps config when absent to provide a direct repair/setup path without forcing users to run `init` first.
 - Template snapshots are stored as committed fixtures under `tests/fixtures/templates/` to keep generated outputs deterministic and reviewable.
+- Step 13 matrix combines command-level integration checks with explicit content-classification assertions to cover slug-collision and post routing behavior that are not yet exposed as dedicated CLI checks.

@@ -1,0 +1,27 @@
+[site]
+name = "Docs Only"
+url = "https://example.com/"
+
+[content]
+source_dir = "docs"
+output_dir = "site"
+ignore_patterns = [".obsidian/**"]
+blog_dirs = ["blog", "posts"]
+default_type = "doc"
+
+[vault]
+mode = "direct"
+link_path = "docs"
+
+[validation]
+require_date_for_posts = true
+fail_on_broken_links = true
+check_heading_anchors = true
+
+[deploy]
+method = "gh-pages"
+site_dir = "site"
+branch = "main"
+pages_branch = "gh-pages"
+
+[hooks]

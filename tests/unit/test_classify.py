@@ -1,5 +1,6 @@
 """Tests for content classification and routing using fixture data."""
 
+from datetime import date
 from pathlib import Path
 
 import pytest
@@ -61,3 +62,14 @@ def test_collision_detection_raises(fixture_file: callable) -> None:
 
     with pytest.raises(SlugCollisionError):
         enforce_no_slug_collisions(routes)
+
+
+def test_post_date_accepts_python_date_object(classifier: ContentClassifier) -> None:
+    route = classifier.classify(
+        Path("blog/post-with-date.md"),
+        {"type": "post", "date": date(2026, 4, 3), "slug": "post-with-date"},
+    )
+    assert route.date is not None
+    assert route.date.year == 2026
+    assert route.date.month == 4
+    assert route.date.day == 3

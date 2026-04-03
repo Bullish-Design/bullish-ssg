@@ -1,21 +1,20 @@
 # CONTEXT
 
-Completed Step 12 implementation.
+Completed Step 13 implementation.
 
 Implemented:
-- Added template renderer module: `src/bullish_ssg/init/templates.py`.
-- Added template assets under `src/bullish_ssg/init/templates/`:
-  - `bullish-ssg.toml.tmpl`
-  - `precommit_hook.yaml.tmpl`
-  - `devenv_snippet.nix.tmpl`
-  - `github_pages_workflow.yaml.tmpl` (optional CI template)
-- Refactored `init` patchers to consume rendered templates instead of hardcoded multiline strings.
-- Added snapshot fixtures under `tests/fixtures/templates/`.
-- Added snapshot/validation tests in `tests/unit/test_init_templates.py`.
+- Added committed E2E fixtures under `tests/fixtures/e2e/` for:
+  - docs-only direct mode,
+  - docs+blog direct mode,
+  - symlink mode with external vault,
+  - broken links,
+  - slug collision.
+- Added integration matrix test file: `tests/integration/test_e2e_matrix.py` covering command-level flows and matrix scenarios.
+- Added classifier fix for YAML date objects (`datetime.date`) and test coverage update in `tests/unit/test_classify.py`.
 
-Verification run:
-- `devenv shell -- pytest tests/ -k "template or generated or config" -q` passed.
-- `devenv shell -- pytest tests/unit/test_init_scaffold.py tests/integration/test_cli_init.py tests/integration/test_cli_link_vault.py -q` passed.
+Verification runs:
+- `devenv shell -- pytest tests/integration -q` passed.
+- `devenv shell -- pytest tests/ -q` passed twice consecutively (flake check).
 
 Next action:
-- Implement Step 13 E2E fixture matrix and broaden integration tests.
+- Implement Step 14 docs/handoff updates and final verification pass.

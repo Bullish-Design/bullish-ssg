@@ -1,0 +1,3 @@
+# External Vault
+
+See [[notes]].
