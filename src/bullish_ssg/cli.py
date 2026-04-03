@@ -10,6 +10,7 @@ from bullish_ssg.config.schema import BullishConfig
 from bullish_ssg.deploy.branch_pages import BranchPagesDeployer
 from bullish_ssg.deploy.gh_pages import GHPagesDeployer
 from bullish_ssg.deploy.preflight import DeployPreflight
+from bullish_ssg.init.scaffold import ProjectScaffolder
 from bullish_ssg.render.kiln import BuildManager, KilnError
 from bullish_ssg.vault_link.resolver import VaultResolutionError, resolve_vault_path
 from bullish_ssg.validate.rules import ValidationRunner, WikilinkValidator
@@ -35,13 +36,24 @@ def init(
     dry_run: bool = typer.Option(False, "--dry-run", help="Show what would be done"),
 ) -> None:
     """Initialize a new Bullish SSG project."""
-    typer.echo("Initializing project...")
+    repo_root = (path or Path.cwd()).resolve()
+    scaffolder = ProjectScaffolder(repo_root)
+    result = scaffolder.run(dry_run=dry_run)
+
     if dry_run:
-        typer.echo("[DRY RUN] Would create bullish-ssg.toml")
-        typer.echo("[DRY RUN] Would update .gitignore")
-        typer.echo("[DRY RUN] Would update devenv.nix")
-    else:
+        if result.changed:
+            for change in result.changes:
+                typer.echo(f"[DRY RUN] {change.action}: {change.path} ({change.detail})")
+        else:
+            typer.echo("[DRY RUN] No changes needed")
+        return
+
+    if result.changed:
+        for change in result.changes:
+            typer.echo(f"{change.action}: {change.path} ({change.detail})")
         typer.echo("Project initialized successfully")
+    else:
+        typer.echo("No changes needed")
 
 
 @app.command()
