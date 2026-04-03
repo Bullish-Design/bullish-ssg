@@ -7,12 +7,15 @@ import typer
 
 from bullish_ssg.config.loader import find_config_file, load_config
 from bullish_ssg.config.schema import BullishConfig
+from bullish_ssg.config.writer import upsert_vault_symlink_settings
 from bullish_ssg.deploy.branch_pages import BranchPagesDeployer
 from bullish_ssg.deploy.gh_pages import GHPagesDeployer
 from bullish_ssg.deploy.preflight import DeployPreflight
+from bullish_ssg.init.patchers import ensure_config_file
 from bullish_ssg.init.scaffold import ProjectScaffolder
 from bullish_ssg.render.kiln import BuildManager, KilnError
-from bullish_ssg.vault_link.resolver import VaultResolutionError, resolve_vault_path
+from bullish_ssg.vault_link.manager import SymlinkError, VaultLinkManager
+from bullish_ssg.vault_link.resolver import resolve_vault_path
 from bullish_ssg.validate.rules import ValidationRunner, WikilinkValidator
 
 app = typer.Typer(help="Bullish SSG - Static site generator")
@@ -64,7 +67,54 @@ def link_vault(
     force: bool = typer.Option(False, "--force", help="Force overwrite"),
 ) -> None:
     """Link an external Obsidian vault via symlink."""
-    typer.echo(f"Linking vault from {target} to {link_path}")
+    repo_root = Path.cwd()
+    target_path = target.expanduser().resolve()
+
+    if not target_path.exists():
+        typer.echo(f"Error: Vault target does not exist: {target_path}", err=True)
+        raise typer.Exit(code=1)
+    if not target_path.is_dir():
+        typer.echo(f"Error: Vault target is not a directory: {target_path}", err=True)
+        raise typer.Exit(code=1)
+
+    manager = VaultLinkManager(source_path=target_path, link_path=link_path, repo_root=repo_root)
+
+    try:
+        if repair:
+            try:
+                changed = manager.repair()
+            except SymlinkError:
+                if not force:
+                    raise
+                changed = manager.create(force=True)
+        else:
+            changed = manager.create(force=force)
+    except SymlinkError as exc:
+        typer.echo(f"Link error: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+
+    config_path = find_config_file(repo_root)
+    if config_path is None:
+        ensure_config_file(repo_root, dry_run=False)
+        config_path = repo_root / "bullish-ssg.toml"
+
+    config_changed = upsert_vault_symlink_settings(
+        config_path=config_path,
+        source_path=target_path,
+        link_path=link_path,
+    )
+
+    if changed:
+        typer.echo(f"Vault link updated: {manager.full_link_path} -> {target_path}")
+    else:
+        typer.echo(f"Vault link already points to: {target_path}")
+
+    if config_changed:
+        typer.echo(f"Config updated: {config_path}")
+    else:
+        typer.echo(f"Config already up to date: {config_path}")
+
+    typer.echo(f"Effective vault path: {target_path}")
 
 
 @app.command()

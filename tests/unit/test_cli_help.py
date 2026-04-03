@@ -1,6 +1,10 @@
 """Tests for CLI help and command registration."""
 
+from pathlib import Path
+
+import pytest
 from typer.testing import CliRunner
+
 from bullish_ssg.cli import app
 
 runner = CliRunner()
@@ -39,9 +43,12 @@ def test_init_stub_returns_success() -> None:
     assert "DRY RUN" in result.output
 
 
-def test_link_vault_stub_returns_success() -> None:
-    """Test that link-vault stub returns success."""
-    result = runner.invoke(app, ["link-vault", "/tmp/test-vault"])
+def test_link_vault_with_valid_target_returns_success(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test that link-vault creates/updates vault link for a valid target directory."""
+    monkeypatch.chdir(tmp_path)
+    target = tmp_path / "vault"
+    target.mkdir()
+    result = runner.invoke(app, ["link-vault", str(target), "--link-path", str(tmp_path / "docs")])
     assert result.exit_code == 0
 
 
