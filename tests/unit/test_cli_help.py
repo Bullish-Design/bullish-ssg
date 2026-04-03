@@ -45,28 +45,32 @@ def test_link_vault_stub_returns_success() -> None:
     assert result.exit_code == 0
 
 
-def test_build_stub_returns_success() -> None:
-    """Test that build stub returns success."""
+def test_build_requires_config() -> None:
+    """Test that build requires project configuration."""
     result = runner.invoke(app, ["build", "--dry-run"])
-    assert result.exit_code == 0
+    assert result.exit_code == 1
+    assert "No configuration found" in result.output
 
 
-def test_serve_stub_returns_success() -> None:
-    """Test that serve stub returns success."""
+def test_serve_requires_config() -> None:
+    """Test that serve requires project configuration."""
     result = runner.invoke(app, ["serve"])
-    assert result.exit_code == 0
+    assert result.exit_code == 1
+    assert "No configuration found" in result.output
 
 
 def test_validate_stub_returns_success() -> None:
-    """Test that validate stub returns success."""
+    """Test that validate requires project configuration."""
     result = runner.invoke(app, ["validate"])
-    assert result.exit_code == 0
+    assert result.exit_code == 1
+    assert "No configuration found" in result.output
 
 
 def test_check_links_stub_returns_success() -> None:
-    """Test that check-links stub returns success."""
+    """Test that check-links requires project configuration."""
     result = runner.invoke(app, ["check-links"])
-    assert result.exit_code == 0
+    assert result.exit_code == 1
+    assert "No configuration found" in result.output
 
 
 def test_deploy_stub_returns_success() -> None:

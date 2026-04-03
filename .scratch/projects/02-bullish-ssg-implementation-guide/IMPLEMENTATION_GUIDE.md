@@ -405,6 +405,7 @@ Write tests first:
 - missing page fails with source line.
 - missing heading anchor fails.
 - links to excluded unpublished pages fail or warn per policy.
+- tests must use committed fixture content under `tests/fixtures/` (do not construct markdown/config samples inline in test bodies).
 
 Run:
 
@@ -449,6 +450,7 @@ Write tests first:
 - `validate` fails when symlink target is broken in symlink mode.
 - `check-links` fails when broken wikilink exists.
 - CLI exit codes are non-zero on failure.
+- integration tests must run from copied fixture workspaces (for example via `fixture_copy` + `monkeypatch.chdir`) and avoid ad-hoc `write_text` setup for sample docs/config files.
 
 Run:
 

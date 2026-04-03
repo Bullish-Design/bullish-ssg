@@ -7,7 +7,9 @@ import typer
 
 from bullish_ssg.config.loader import find_config_file, load_config
 from bullish_ssg.config.schema import BullishConfig
+from bullish_ssg.render.kiln import BuildManager, KilnError
 from bullish_ssg.vault_link.resolver import VaultResolutionError, resolve_vault_path
+from bullish_ssg.validate.rules import ValidationRunner, WikilinkValidator
 
 app = typer.Typer(help="Bullish SSG - Static site generator")
 
@@ -56,40 +58,152 @@ def build(
 ) -> None:
     """Build the static site."""
     config = _load_config_if_present()
-    typer.echo("Building site...")
-    if config is not None:
-        try:
-            resolved_vault = resolve_vault_path(config.vault)
-            typer.echo(f"Resolved vault: {resolved_vault}")
-        except VaultResolutionError as exc:
-            typer.echo(f"Vault resolution warning: {exc}")
-    if dry_run:
-        typer.echo("[DRY RUN] Would run: kiln generate")
-    else:
-        typer.echo("Build completed")
+    if config is None:
+        typer.echo("Error: No configuration found. Run 'bullish-ssg init' first.", err=True)
+        raise typer.Exit(code=1)
+
+    # Resolve vault path
+    try:
+        vault_path = resolve_vault_path(config.vault)
+    except Exception as exc:
+        typer.echo(f"Vault resolution error: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+
+    # Build using Kiln
+    manager = BuildManager()
+    output_dir = Path(config.content.output_dir)
+
+    try:
+        result = manager.build_from_config(
+            vault_path=vault_path,
+            output_dir=output_dir,
+            dry_run=dry_run,
+        )
+
+        if dry_run:
+            typer.echo(result.stdout)
+        else:
+            if result.success:
+                typer.echo(f"Build completed: {output_dir}")
+                if result.stdout:
+                    typer.echo(result.stdout)
+            else:
+                typer.echo(f"Build failed with code {result.returncode}", err=True)
+                if result.stderr:
+                    typer.echo(result.stderr, err=True)
+                raise typer.Exit(code=1)
+    except KilnError as exc:
+        typer.echo(f"Build error: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
 
 
 @app.command()
 def serve(
     port: int = typer.Option(8000, "--port", help="Port to serve on"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Show what would be served"),
 ) -> None:
     """Serve the site locally."""
-    _load_config_if_present()
-    typer.echo(f"Serving site on port {port}...")
+    config = _load_config_if_present()
+    if config is None:
+        typer.echo("Error: No configuration found. Run 'bullish-ssg init' first.", err=True)
+        raise typer.Exit(code=1)
+
+    # Resolve vault path
+    try:
+        vault_path = resolve_vault_path(config.vault)
+    except Exception as exc:
+        typer.echo(f"Vault resolution error: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+
+    # Serve using Kiln
+    manager = BuildManager()
+
+    try:
+        result = manager.serve_from_config(
+            vault_path=vault_path,
+            port=port,
+            dry_run=dry_run,
+        )
+
+        if dry_run:
+            typer.echo(result.stdout)
+        else:
+            if result.success:
+                typer.echo(f"Serving site on port {port}...")
+                if result.stdout:
+                    typer.echo(result.stdout)
+            else:
+                typer.echo(f"Serve failed with code {result.returncode}", err=True)
+                if result.stderr:
+                    typer.echo(result.stderr, err=True)
+                raise typer.Exit(code=1)
+    except KilnError as exc:
+        typer.echo(f"Serve error: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
 
 
 @app.command()
-def validate() -> None:
+def validate(
+    include_orphans: bool = typer.Option(False, "--include-orphans", help="Check for orphaned pages"),
+) -> None:
     """Validate site configuration and content."""
-    _load_config_if_present()
-    typer.echo("Validating site...")
+    config = _load_config_if_present()
+    if config is None:
+        typer.echo("Error: No configuration found. Run 'bullish-ssg init' first.", err=True)
+        raise typer.Exit(code=1)
+
+    # Resolve vault path
+    try:
+        vault_path = resolve_vault_path(config.vault)
+    except Exception as exc:
+        typer.echo(f"Vault resolution error: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+
+    # Run validation
+    runner = ValidationRunner(
+        vault_path=vault_path,
+        vault_config=config.vault,
+        ignore_patterns=list(config.content.ignore_patterns),
+    )
+    result = runner.run_full_validation(include_orphan_check=include_orphans)
+
+    # Print results
+    result.print_summary()
+
+    # Exit with appropriate code
+    if not result.passed:
+        raise typer.Exit(code=1)
 
 
 @app.command()
 def check_links() -> None:
     """Check for broken internal links."""
-    _load_config_if_present()
-    typer.echo("Checking links...")
+    config = _load_config_if_present()
+    if config is None:
+        typer.echo("Error: No configuration found. Run 'bullish-ssg init' first.", err=True)
+        raise typer.Exit(code=1)
+
+    # Resolve vault path
+    try:
+        vault_path = resolve_vault_path(config.vault)
+    except Exception as exc:
+        typer.echo(f"Vault resolution error: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+
+    # Run wikilink validation
+    validator = WikilinkValidator(
+        vault_path=vault_path,
+        fail_on_broken=config.validation.fail_on_broken_links,
+        ignore_patterns=list(config.content.ignore_patterns),
+    )
+    result = validator.validate()
+
+    # Print results
+    result.print_summary()
+
+    # Exit with appropriate code
+    if not result.passed:
+        raise typer.Exit(code=1)
 
 
 @app.command()

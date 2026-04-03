@@ -1,0 +1,11 @@
+[site]
+name = "Symlink Site"
+url = "https://example.com/"
+
+[content]
+source_dir = "docs"
+
+[vault]
+mode = "symlink"
+source_path = "vault-target"
+link_path = "docs"

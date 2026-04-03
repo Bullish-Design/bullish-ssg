@@ -1,0 +1,13 @@
+[site]
+name = "Broken Links Site"
+url = "https://example.com/"
+
+[content]
+source_dir = "docs"
+
+[vault]
+mode = "direct"
+link_path = "docs"
+
+[validation]
+fail_on_broken_links = true

@@ -126,7 +126,7 @@ class PageIndex:
             Relative path if found, None otherwise
         """
         # Normalize the page ref
-        normalized = self._normalize_page_ref(page_ref)
+        normalized = normalize_page_ref(page_ref)
 
         # Direct match
         if normalized in self._slug_to_path:
@@ -138,15 +138,6 @@ class PageIndex:
             return self._slug_to_path[stem]
 
         return None
-
-    def _normalize_page_ref(self, ref: str) -> str:
-        """Normalize a page reference for matching."""
-        # Remove extension if present
-        if "." in ref:
-            ref = ref.rsplit(".", 1)[0]
-        # Convert spaces and underscores to hyphens, lowercase
-        ref = ref.lower().replace(" ", "-").replace("_", "-")
-        return ref
 
     def get_page_path(self, relative_path: Path) -> Path:
         """Get full path for a relative path."""
@@ -212,17 +203,23 @@ class WikilinkResolver:
         self,
         page_index: PageIndex,
         cache_content: bool = True,
+        unpublished_refs: Optional[set[str]] = None,
+        unpublished_policy: str = "warning",
     ) -> None:
         """Initialize resolver with page index.
 
         Args:
             page_index: Indexed pages for resolution
             cache_content: Whether to cache file contents for heading lookup
+            unpublished_refs: Normalized refs for excluded/unpublished pages
+            unpublished_policy: "warning", "error", or "ignore"
         """
         self.page_index = page_index
         self._cache_content = cache_content
         self._content_cache: dict[Path, str] = {}
         self._heading_extractor = HeadingExtractor()
+        self._unpublished_refs = unpublished_refs or set()
+        self._unpublished_policy = unpublished_policy
 
     def _get_content(self, file_path: Path) -> str:
         """Get file content, with caching if enabled."""
@@ -250,6 +247,15 @@ class WikilinkResolver:
         target_path = self.page_index.resolve_page(wikilink.page)
 
         if target_path is None:
+            normalized_ref = normalize_page_ref(wikilink.page)
+            if normalized_ref in self._unpublished_refs and self._unpublished_policy != "ignore":
+                return WikilinkDiagnostic(
+                    source_file=source_file,
+                    line_number=wikilink.line_number,
+                    raw_link=wikilink.raw,
+                    reason=f"Target page exists but is unpublished/excluded: '{wikilink.page}'",
+                    severity="error" if self._unpublished_policy == "error" else "warning",
+                )
             return WikilinkDiagnostic(
                 source_file=source_file,
                 line_number=wikilink.line_number,
@@ -332,15 +338,12 @@ class WikilinkResolver:
 def build_page_index(
     vault_path: Path,
     content_files: list[Path],
-    slug_extractor: callable = None,
 ) -> PageIndex:
     """Build a page index from discovered content files.
 
     Args:
         vault_path: Root of the vault
         content_files: List of relative paths to content files
-        slug_extractor: Optional function to extract slugs from file path
-
     Returns:
         Populated PageIndex
     """
@@ -359,3 +362,10 @@ def build_page_index(
         index.add_page(relative_path, slugs)
 
     return index
+
+
+def normalize_page_ref(ref: str) -> str:
+    """Normalize a page reference for matching."""
+    if "." in ref:
+        ref = ref.rsplit(".", 1)[0]
+    return ref.lower().replace(" ", "-").replace("_", "-")

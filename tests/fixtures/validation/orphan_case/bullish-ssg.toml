@@ -1,0 +1,10 @@
+[site]
+name = "Orphan Site"
+url = "https://example.com/"
+
+[content]
+source_dir = "docs"
+
+[vault]
+mode = "direct"
+link_path = "docs"

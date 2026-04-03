@@ -324,6 +324,29 @@ class TestWikilinkResolver:
 
         assert len(diagnostics) == 0
 
+    def test_unpublished_target_returns_warning(self, wikilink_fixture_path: Path) -> None:
+        content_files = [Path("index.md"), Path("getting-started.md"), Path("about.md"), Path("features.md")]
+        index = build_page_index(wikilink_fixture_path, content_files)
+        resolver = WikilinkResolver(
+            index,
+            unpublished_refs={"secret"},
+            unpublished_policy="warning",
+        )
+        link = ParsedWikilink(
+            raw="[[secret]]",
+            page="secret",
+            alias=None,
+            heading=None,
+            block_id=None,
+            line_number=9,
+        )
+
+        diagnostic = resolver.resolve(link, wikilink_fixture_path / "index.md")
+
+        assert diagnostic is not None
+        assert diagnostic.severity == "warning"
+        assert "unpublished/excluded" in diagnostic.reason
+
 
 class TestHeadingNormalization:
     """Tests for heading anchor normalization consistency."""
