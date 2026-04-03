@@ -3,7 +3,6 @@
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 
 class KilnError(Exception):
@@ -34,7 +33,7 @@ class SubprocessRunner:
     def run(
         self,
         command: list[str],
-        cwd: Optional[Path] = None,
+        cwd: Path | None = None,
         capture_output: bool = True,
     ) -> CommandResult:
         """Run a command and capture result.
@@ -77,7 +76,7 @@ class KilnAdapter:
 
     def __init__(
         self,
-        runner: Optional[SubprocessRunner] = None,
+        runner: SubprocessRunner | None = None,
     ) -> None:
         """Initialize adapter.
 
@@ -90,7 +89,7 @@ class KilnAdapter:
         self,
         source_dir: Path,
         output_dir: Path,
-        config_file: Optional[Path] = None,
+        config_file: Path | None = None,
         dry_run: bool = False,
     ) -> CommandResult:
         """Build the static site using kiln generate.
@@ -131,7 +130,7 @@ class KilnAdapter:
         self,
         source_dir: Path,
         port: int = 8000,
-        config_file: Optional[Path] = None,
+        config_file: Path | None = None,
         dry_run: bool = False,
     ) -> CommandResult:
         """Serve the site locally using kiln serve.
@@ -174,7 +173,7 @@ class BuildManager:
 
     def __init__(
         self,
-        kiln_adapter: Optional[KilnAdapter] = None,
+        kiln_adapter: KilnAdapter | None = None,
     ) -> None:
         """Initialize build manager.
 

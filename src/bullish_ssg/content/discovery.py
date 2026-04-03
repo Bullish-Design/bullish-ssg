@@ -1,9 +1,9 @@
 """Content discovery for indexing vault files."""
 
+from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
 from fnmatch import fnmatch
 from pathlib import Path
-from typing import Iterator, Sequence
 
 
 @dataclass

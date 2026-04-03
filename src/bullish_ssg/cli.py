@@ -1,41 +1,41 @@
 """CLI entry point for Bullish SSG."""
 
 from pathlib import Path
-from typing import Optional
 
 import typer
 
 from bullish_ssg.config.loader import find_config_file, load_config
 from bullish_ssg.config.schema import BullishConfig
 from bullish_ssg.config.writer import upsert_vault_symlink_settings
+from bullish_ssg.deploy.base import Deployer
 from bullish_ssg.deploy.branch_pages import BranchPagesDeployer
 from bullish_ssg.deploy.gh_pages import GHPagesDeployer
 from bullish_ssg.deploy.preflight import DeployPreflight
 from bullish_ssg.init.patchers import ensure_config_file
 from bullish_ssg.init.scaffold import ProjectScaffolder
 from bullish_ssg.render.kiln import BuildManager, KilnError
-from bullish_ssg.vault_link.manager import SymlinkError, VaultLinkManager
-from bullish_ssg.vault_link.resolver import resolve_vault_path
 from bullish_ssg.validate.rules import ValidationRunner, WikilinkValidator
+from bullish_ssg.vault_link.manager import SymlinkError, VaultLinkManager
+from bullish_ssg.vault_link.resolver import VaultResolutionError, resolve_vault_path
 
 app = typer.Typer(help="Bullish SSG - Static site generator")
 
 
-def _load_config_if_present() -> Optional[BullishConfig]:
+def _load_config_if_present() -> BullishConfig | None:
     """Load config if available; return None when not configured yet."""
     config_path = find_config_file()
     if config_path is None:
         return None
     try:
         return load_config(config_path)
-    except Exception as exc:  # pragma: no cover - defensive CLI handling
+    except (FileNotFoundError, ValueError) as exc:
         typer.echo(f"Configuration error: {exc}", err=True)
         raise typer.Exit(code=2) from exc
 
 
 @app.command()
 def init(
-    path: Optional[Path] = typer.Option(None, "--path", help="Path to initialize"),
+    path: Path | None = typer.Option(None, "--path", help="Path to initialize"),
     dry_run: bool = typer.Option(False, "--dry-run", help="Show what would be done"),
 ) -> None:
     """Initialize a new Bullish SSG project."""
@@ -130,7 +130,7 @@ def build(
     # Resolve vault path
     try:
         vault_path = resolve_vault_path(config.vault)
-    except Exception as exc:
+    except VaultResolutionError as exc:
         typer.echo(f"Vault resolution error: {exc}", err=True)
         raise typer.Exit(code=1) from exc
 
@@ -176,7 +176,7 @@ def serve(
     # Resolve vault path
     try:
         vault_path = resolve_vault_path(config.vault)
-    except Exception as exc:
+    except VaultResolutionError as exc:
         typer.echo(f"Vault resolution error: {exc}", err=True)
         raise typer.Exit(code=1) from exc
 
@@ -220,7 +220,7 @@ def validate(
     # Resolve vault path
     try:
         vault_path = resolve_vault_path(config.vault)
-    except Exception as exc:
+    except VaultResolutionError as exc:
         typer.echo(f"Vault resolution error: {exc}", err=True)
         raise typer.Exit(code=1) from exc
 
@@ -251,7 +251,7 @@ def check_links() -> None:
     # Resolve vault path
     try:
         vault_path = resolve_vault_path(config.vault)
-    except Exception as exc:
+    except VaultResolutionError as exc:
         typer.echo(f"Vault resolution error: {exc}", err=True)
         raise typer.Exit(code=1) from exc
 
@@ -298,15 +298,15 @@ def deploy(
     site_dir = Path(config.deploy.site_dir)
     deploy_method = config.deploy.method
 
+    adapter: Deployer
     if deploy_method == "gh-pages":
         adapter = GHPagesDeployer(config.deploy)
-        deploy_url = adapter.get_deploy_url()
     elif deploy_method == "branch":
         adapter = BranchPagesDeployer(config.deploy)
-        deploy_url = adapter.get_deploy_url()
     else:
         typer.echo(f"Error: Unknown deploy method: {deploy_method}", err=True)
         raise typer.Exit(code=1)
+    deploy_url = adapter.get_deploy_url()
 
     # Execute deploy
     try:
@@ -324,7 +324,7 @@ def deploy(
                 if result.stderr:
                     typer.echo(result.stderr, err=True)
                 raise typer.Exit(code=1)
-    except Exception as exc:
+    except (KilnError, OSError, RuntimeError, ValueError) as exc:
         typer.echo(f"Deploy error: {exc}", err=True)
         raise typer.Exit(code=1) from exc
 

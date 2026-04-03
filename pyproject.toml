@@ -13,7 +13,7 @@ authors = [
 dependencies = [
     "pydantic>=2.12.5",
     "typer>=0.12.0",
-    "toml>=0.10.2",
+    "tomli-w>=1.2.0",
     "python-frontmatter>=1.0.0",
 ]
 
@@ -24,13 +24,13 @@ bullish-ssg = "bullish_ssg.cli:main"
 dev = [
   "pytest>=7.0",
   "pytest-cov>=4.1",
-  "mypy>=1.10",
+  "ty",
   "ruff>=0.5.0",
 ]
 
-#[project.urls]
-#homepage = "https://github.com/Bullish-Design/template-py"
-#repository = "https://github.com/Bullish-Design/template-py.git"
+[project.urls]
+homepage = "https://github.com/Bullish-Design/bullish-ssg"
+repository = "https://github.com/Bullish-Design/bullish-ssg.git"
 
 [build-system]
 requires = ["hatchling>=1.18"]
@@ -57,18 +57,6 @@ include = [
 addopts = "-q --cov=bullish_ssg --cov-report=term-missing"
 testpaths = ["tests"]
 
-[tool.mypy]
-python_version = "3.13"
-packages = ["src/bullish_ssg"]
-strict = true
-warn_unused_ignores = true
-warn_redundant_casts = true
-warn_unused_configs = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-disallow_untyped_calls = true
-no_implicit_optional = true
-
 [tool.ruff]
 line-length = 120
 target-version = "py313"
@@ -82,10 +70,9 @@ select = [
   "UP",
   "B",
 ]
-ignore = []
+ignore = ["B008"]
 
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
 line-ending = "lf"
-

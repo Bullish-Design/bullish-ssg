@@ -97,7 +97,7 @@ class TestKilnAdapter:
         output_dir = Path("/output")
         config_file = Path("/config.toml")
 
-        result = adapter.build(source_dir, output_dir, config_file=config_file)
+        adapter.build(source_dir, output_dir, config_file=config_file)
 
         assert "--config" in mock_runner.commands[0]
         assert str(config_file) in mock_runner.commands[0]

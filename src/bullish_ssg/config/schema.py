@@ -1,13 +1,13 @@
 """Configuration schema for Bullish SSG."""
 
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
-from typing import Optional, Self
+from typing import Self
 
 from pydantic import AliasChoices, BaseModel, Field, field_validator, model_validator
 
 
-class VaultMode(str, Enum):
+class VaultMode(StrEnum):
     """Vault linking modes."""
 
     DIRECT = "direct"
@@ -19,8 +19,8 @@ class SiteConfig(BaseModel):
 
     url: str = Field(..., description="Base URL with trailing slash")
     name: str = Field(..., description="Site name/title", validation_alias=AliasChoices("name", "title"))
-    description: Optional[str] = Field(None, description="Site description")
-    author: Optional[str] = Field(None, description="Default author")
+    description: str | None = Field(None, description="Site description")
+    author: str | None = Field(None, description="Default author")
 
     @property
     def title(self) -> str:
@@ -66,7 +66,7 @@ class VaultConfig(BaseModel):
     """Vault configuration section."""
 
     mode: VaultMode = Field(VaultMode.DIRECT, description="Vault linking mode")
-    source_path: Optional[Path] = Field(None, description="External vault path (required for symlink mode)")
+    source_path: Path | None = Field(None, description="External vault path (required for symlink mode)")
     link_path: Path = Field(Path("docs"), description="Local path for vault/symlink")
 
     @model_validator(mode="after")
@@ -97,10 +97,10 @@ class DeployConfig(BaseModel):
 class HookConfig(BaseModel):
     """Hook configuration section."""
 
-    pre_build: Optional[str] = Field(None, description="Pre-build hook command")
-    post_build: Optional[str] = Field(None, description="Post-build hook command")
-    pre_deploy: Optional[str] = Field(None, description="Pre-deploy hook command")
-    post_deploy: Optional[str] = Field(None, description="Post-deploy hook command")
+    pre_build: str | None = Field(None, description="Pre-build hook command")
+    post_build: str | None = Field(None, description="Post-build hook command")
+    pre_deploy: str | None = Field(None, description="Pre-deploy hook command")
+    post_deploy: str | None = Field(None, description="Post-deploy hook command")
 
 
 class BullishConfig(BaseModel):

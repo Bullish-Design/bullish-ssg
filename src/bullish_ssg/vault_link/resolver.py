@@ -1,7 +1,6 @@
 """Vault path resolver for symlink and direct modes."""
 
 from pathlib import Path
-from typing import Optional
 
 from bullish_ssg.config.schema import VaultConfig, VaultMode
 
@@ -15,7 +14,7 @@ class VaultResolutionError(Exception):
 class VaultResolver:
     """Resolves effective vault path from configuration."""
 
-    def __init__(self, config: VaultConfig, repo_root: Optional[Path] = None) -> None:
+    def __init__(self, config: VaultConfig, repo_root: Path | None = None) -> None:
         """Initialize resolver with config.
 
         Args:
@@ -126,7 +125,7 @@ class VaultResolver:
         else:
             return "something unexpected"
 
-    def check_health(self) -> tuple[bool, Optional[str]]:
+    def check_health(self) -> tuple[bool, str | None]:
         """Check if vault is healthy.
 
         Returns:
@@ -141,7 +140,7 @@ class VaultResolver:
 
 def resolve_vault_path(
     config: VaultConfig,
-    repo_root: Optional[Path] = None,
+    repo_root: Path | None = None,
 ) -> Path:
     """Convenience function to resolve vault path.
 

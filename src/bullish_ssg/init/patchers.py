@@ -2,15 +2,16 @@
 
 from __future__ import annotations
 
+import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-import toml
+import tomli_w
 
 from bullish_ssg.init.templates import render_default_config, render_devenv_snippet, render_precommit_hook
 
-DEFAULT_CONFIG: dict[str, Any] = toml.loads(render_default_config())
+DEFAULT_CONFIG: dict[str, Any] = tomllib.loads(render_default_config())
 
 DEFAULT_DOCS_INDEX = "# Welcome\n\nThis site is managed by bullish-ssg.\n"
 
@@ -43,16 +44,16 @@ def ensure_config_file(repo_root: Path, dry_run: bool) -> list[PatchChange]:
     path = repo_root / "bullish-ssg.toml"
     if not path.exists():
         if not dry_run:
-            path.write_text(toml.dumps(DEFAULT_CONFIG), encoding="utf-8")
+            path.write_text(tomli_w.dumps(DEFAULT_CONFIG), encoding="utf-8")
         return [PatchChange(path=path, action="create", detail="Created default bullish-ssg.toml")]
 
-    existing = toml.load(path)
+    existing = tomllib.loads(path.read_text(encoding="utf-8"))
     merged = _deep_merge(existing, DEFAULT_CONFIG)
     if merged == existing:
         return []
 
     if not dry_run:
-        path.write_text(toml.dumps(merged), encoding="utf-8")
+        path.write_text(tomli_w.dumps(merged), encoding="utf-8")
     return [PatchChange(path=path, action="update", detail="Merged missing default config keys")]
 
 
@@ -94,7 +95,7 @@ def ensure_precommit(repo_root: Path, dry_run: bool) -> list[PatchChange]:
         return []
 
     if "repos:" not in text:
-        updated = "repos:\n" + PRECOMMIT_BLOCK
+        updated = "repos:\n" + hook_block
     else:
         updated = text
         if not updated.endswith("\n"):

@@ -3,11 +3,12 @@
 import re
 from dataclasses import dataclass
 from datetime import date, datetime
+from enum import StrEnum
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 
-class ContentType(str):
+class ContentType(StrEnum):
     """Content type constants."""
 
     PAGE = "page"
@@ -31,7 +32,7 @@ class ContentRoute:
     relative_path: Path
     content_type: str
     slug: str
-    date: Optional[datetime]
+    date: datetime | None
     permalink: str
     draft: bool
 
@@ -42,7 +43,7 @@ class ContentClassifier:
     def __init__(
         self,
         vault_path: Path,
-        blog_dirs: Optional[list[str]] = None,
+        blog_dirs: list[str] | None = None,
         default_type: str = ContentType.DOC,
         require_date_for_posts: bool = True,
         posts_url_style: str = "date-slug",
@@ -110,7 +111,7 @@ class ContentClassifier:
         slug = re.sub(r"-+", "-", slug)
         return slug.strip("-")
 
-    def _parse_date(self, date_value: Any, content_type: str) -> Optional[datetime]:
+    def _parse_date(self, date_value: Any, content_type: str) -> datetime | None:
         """Parse date from various formats."""
         if date_value is None:
             if content_type == ContentType.POST and self.require_date_for_posts:
@@ -146,7 +147,7 @@ class ContentClassifier:
         self,
         content_type: str,
         slug: str,
-        date: Optional[datetime],
+        date: datetime | None,
         relative_path: Path,
     ) -> str:
         """Build permalink from content info."""

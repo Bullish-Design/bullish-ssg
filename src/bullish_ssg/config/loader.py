@@ -1,17 +1,14 @@
 """Configuration loader for Bullish SSG."""
 
+import tomllib
 from pathlib import Path
-from typing import Optional
-
-import toml
 
 from bullish_ssg.config.schema import BullishConfig
-
 
 CONFIG_FILENAMES = ["bullish-ssg.toml", "bullish-ssg.config.toml"]
 
 
-def find_config_file(start_path: Optional[Path] = None) -> Optional[Path]:
+def find_config_file(start_path: Path | None = None) -> Path | None:
     """Find config file starting from given path (or cwd) and walking up.
 
     Args:
@@ -42,7 +39,7 @@ def find_config_file(start_path: Optional[Path] = None) -> Optional[Path]:
     return None
 
 
-def load_config(config_path: Optional[Path] = None) -> BullishConfig:
+def load_config(config_path: Path | None = None) -> BullishConfig:
     """Load configuration from file.
 
     Args:
@@ -66,8 +63,8 @@ def load_config(config_path: Optional[Path] = None) -> BullishConfig:
         raise FileNotFoundError(f"Configuration file not found: {config_path}")
 
     try:
-        raw_data = toml.load(config_path)
-    except toml.TomlDecodeError as e:
+        raw_data = tomllib.loads(config_path.read_text(encoding="utf-8"))
+    except tomllib.TOMLDecodeError as e:
         raise ValueError(f"Invalid TOML in config file {config_path}: {e}") from e
 
     try:
@@ -76,7 +73,7 @@ def load_config(config_path: Optional[Path] = None) -> BullishConfig:
         raise ValueError(f"Configuration validation error in {config_path}: {e}") from e
 
 
-def get_config_path() -> Optional[Path]:
+def get_config_path() -> Path | None:
     """Get the path to the config file if one exists.
 
     Returns:

@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import tomllib
 from pathlib import Path
 from typing import Any
 
-import toml
+import tomli_w
 
 
 def upsert_vault_symlink_settings(config_path: Path, source_path: Path, link_path: Path) -> bool:
@@ -16,7 +17,7 @@ def upsert_vault_symlink_settings(config_path: Path, source_path: Path, link_pat
     if not config_path.exists():
         raise FileNotFoundError(f"Configuration file not found: {config_path}")
 
-    data: dict[str, Any] = toml.load(config_path)
+    data: dict[str, Any] = tomllib.loads(config_path.read_text(encoding="utf-8"))
     vault_data = data.get("vault")
     if not isinstance(vault_data, dict):
         vault_data = {}
@@ -26,7 +27,7 @@ def upsert_vault_symlink_settings(config_path: Path, source_path: Path, link_pat
     vault_data["link_path"] = str(link_path)
     data["vault"] = vault_data
 
-    new_text = toml.dumps(data)
+    new_text = tomli_w.dumps(data)
     current_text = config_path.read_text(encoding="utf-8")
     if current_text == new_text:
         return False

@@ -1,9 +1,9 @@
 """Wikilink parsing and resolution for Obsidian-style links."""
 
 import re
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterator, Optional
 
 
 @dataclass
@@ -26,9 +26,9 @@ class ParsedWikilink:
 
     raw: str
     page: str
-    alias: Optional[str]
-    heading: Optional[str]
-    block_id: Optional[str]
+    alias: str | None
+    heading: str | None
+    block_id: str | None
     line_number: int
 
     @property
@@ -110,13 +110,12 @@ class PageIndex:
             relative_path: Relative path from vault root
             slugs: List of slugs that can resolve to this page
         """
-        full_path = self.vault_path / relative_path
         self._path_to_slugs[relative_path] = slugs
 
         for slug in slugs:
             self._slug_to_path[slug] = relative_path
 
-    def resolve_page(self, page_ref: str) -> Optional[Path]:
+    def resolve_page(self, page_ref: str) -> Path | None:
         """Resolve a page reference to a relative path.
 
         Args:
@@ -203,7 +202,7 @@ class WikilinkResolver:
         self,
         page_index: PageIndex,
         cache_content: bool = True,
-        unpublished_refs: Optional[set[str]] = None,
+        unpublished_refs: set[str] | None = None,
         unpublished_policy: str = "warning",
     ) -> None:
         """Initialize resolver with page index.
@@ -233,7 +232,7 @@ class WikilinkResolver:
         self,
         wikilink: ParsedWikilink,
         source_file: Path,
-    ) -> Optional[WikilinkDiagnostic]:
+    ) -> WikilinkDiagnostic | None:
         """Resolve a single wikilink and return diagnostic if broken.
 
         Args:
@@ -277,7 +276,7 @@ class WikilinkResolver:
                         reason=(f"Heading not found: '{wikilink.heading}' in page '{wikilink.page}'"),
                         severity="error",
                     )
-            except (OSError, IOError):
+            except OSError:
                 return WikilinkDiagnostic(
                     source_file=source_file,
                     line_number=wikilink.line_number,

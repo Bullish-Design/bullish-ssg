@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+from bullish_ssg.init.patchers import ensure_precommit
 from bullish_ssg.init.scaffold import ProjectScaffolder
 
 
@@ -21,7 +22,10 @@ class TestProjectScaffolder:
         assert "url = \"http://localhost:8000/\"" in config_text
 
     def test_init_merges_existing_repo_without_duplication(self, tmp_path: Path) -> None:
-        (tmp_path / "bullish-ssg.toml").write_text("[site]\nname='Example'\nurl='https://example.com/'\n", encoding="utf-8")
+        (tmp_path / "bullish-ssg.toml").write_text(
+            "[site]\nname='Example'\nurl='https://example.com/'\n",
+            encoding="utf-8",
+        )
         (tmp_path / ".gitignore").write_text(".venv/\n", encoding="utf-8")
         (tmp_path / ".pre-commit-config.yaml").write_text("repos: []\n", encoding="utf-8")
         (tmp_path / "devenv.nix").write_text("{ pkgs, ... }: {\n}\n", encoding="utf-8")
@@ -50,3 +54,14 @@ class TestProjectScaffolder:
         assert not (tmp_path / ".pre-commit-config.yaml").exists()
         assert not (tmp_path / "devenv.nix").exists()
         assert not (tmp_path / "docs").exists()
+
+    def test_precommit_patcher_handles_file_without_repos_key(self, tmp_path: Path) -> None:
+        precommit = tmp_path / ".pre-commit-config.yaml"
+        precommit.write_text("default_stages: [pre-commit]\n", encoding="utf-8")
+
+        changes = ensure_precommit(tmp_path, dry_run=False)
+
+        assert changes
+        contents = precommit.read_text(encoding="utf-8")
+        assert "repos:" in contents
+        assert "bullish-ssg-validate" in contents

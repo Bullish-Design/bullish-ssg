@@ -2,7 +2,7 @@
 
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Any
 
 
 class SymlinkError(Exception):
@@ -18,7 +18,7 @@ class VaultLinkManager:
         self,
         source_path: Path,
         link_path: Path,
-        repo_root: Optional[Path] = None,
+        repo_root: Path | None = None,
     ) -> None:
         """Initialize manager with paths.
 
@@ -172,7 +172,7 @@ class VaultLinkManager:
         self._remove_symlink()
         return True
 
-    def status(self) -> dict:
+    def status(self) -> dict[str, Any]:
         """Get current status of the symlink.
 
         Returns:
@@ -228,7 +228,7 @@ class VaultLinkManager:
 def create_vault_link(
     source_path: Path,
     link_path: Path = Path("docs"),
-    repo_root: Optional[Path] = None,
+    repo_root: Path | None = None,
     force: bool = False,
 ) -> bool:
     """Convenience function to create vault symlink.

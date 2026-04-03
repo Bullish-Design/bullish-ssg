@@ -1,9 +1,9 @@
 """Branch-based deployment adapter for GitHub Pages."""
 
 from pathlib import Path
-from typing import Optional
 
 from bullish_ssg.config.schema import DeployConfig
+from bullish_ssg.deploy.url import infer_pages_url
 from bullish_ssg.render.kiln import CommandResult, SubprocessRunner
 
 
@@ -13,8 +13,8 @@ class BranchPagesDeployer:
     def __init__(
         self,
         config: DeployConfig,
-        cwd: Optional[Path] = None,
-        runner: Optional[SubprocessRunner] = None,
+        cwd: Path | None = None,
+        runner: SubprocessRunner | None = None,
     ) -> None:
         """Initialize branch-based deployer.
 
@@ -75,9 +75,22 @@ class BranchPagesDeployer:
             return CommandResult(
                 command=[],
                 returncode=0,
-                stdout=f"[DRY RUN] Would execute:\n" + "\n".join(commands),
+                stdout="[DRY RUN] Would execute:\n" + "\n".join(commands),
                 stderr="",
                 success=True,
+            )
+
+        # Require clean working tree for safer branch switching.
+        dirty_check = self.runner.run(["git", "status", "--porcelain"], cwd=self.cwd)
+        if not dirty_check.success:
+            return dirty_check
+        if dirty_check.stdout.strip():
+            return CommandResult(
+                command=["git", "status", "--porcelain"],
+                returncode=1,
+                stdout=dirty_check.stdout,
+                stderr="Refusing deploy: working tree has uncommitted changes",
+                success=False,
             )
 
         # Check if pages branch exists
@@ -197,4 +210,9 @@ class BranchPagesDeployer:
         Returns:
             URL where site will be deployed
         """
-        return f"https://<owner>.github.io/<repo>/ (from {self.config.pages_branch} branch)"
+        remote_result = self.runner.run(["git", "remote", "get-url", "origin"], cwd=self.cwd)
+        if remote_result.success:
+            inferred = infer_pages_url(remote_result.stdout)
+            if inferred is not None:
+                return f"{inferred} (from {self.config.pages_branch} branch)"
+        return f"GitHub Pages URL (from {self.config.pages_branch} branch)"

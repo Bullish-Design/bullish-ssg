@@ -1,7 +1,7 @@
 """Tests for deployment adapters and preflight."""
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -15,8 +15,8 @@ from bullish_ssg.config.schema import (
     VaultConfig,
     VaultMode,
 )
-from bullish_ssg.deploy.gh_pages import GHPagesDeployer
 from bullish_ssg.deploy.branch_pages import BranchPagesDeployer
+from bullish_ssg.deploy.gh_pages import GHPagesDeployer
 from bullish_ssg.deploy.preflight import (
     DeployPreflight,
     PreflightResult,
@@ -121,7 +121,6 @@ class TestDeployPreflight:
         """Test that successful build passes."""
         docs_dir = tmp_path / "docs"
         docs_dir.mkdir()
-        site_dir = tmp_path / "site"
 
         # Create mock kiln adapter that returns success
         mock_adapter = MagicMock(spec=KilnAdapter)
@@ -331,6 +330,20 @@ class TestGHPagesDeployer:
         assert result.success is False
         assert result.returncode == 1
 
+    def test_gh_pages_get_deploy_url_infers_from_origin(self, deploy_config: DeployConfig) -> None:
+        deployer = GHPagesDeployer(deploy_config)
+        mock_runner = MagicMock()
+        mock_runner.run.return_value = CommandResult(
+            command=["git", "remote", "get-url", "origin"],
+            returncode=0,
+            stdout="https://github.com/Bullish-Design/bullish-ssg.git\n",
+            stderr="",
+            success=True,
+        )
+        deployer.runner = mock_runner
+
+        assert deployer.get_deploy_url() == "https://Bullish-Design.github.io/bullish-ssg/"
+
 
 class TestBranchPagesDeployer:
     """Tests for Branch Pages deployer."""
@@ -369,6 +382,14 @@ class TestBranchPagesDeployer:
         # Mock subprocess runner
         mock_runner = MagicMock()
         mock_runner.run.side_effect = [
+            # git status --porcelain (clean tree)
+            CommandResult(
+                command=["git", "status", "--porcelain"],
+                returncode=0,
+                stdout="",
+                stderr="",
+                success=True,
+            ),
             # git branch exists check
             CommandResult(
                 command=["git", "branch", "--list", "gh-pages"],
@@ -469,6 +490,14 @@ class TestBranchPagesDeployer:
 
         mock_runner = MagicMock()
         mock_runner.run.side_effect = [
+            # git status --porcelain (clean tree)
+            CommandResult(
+                command=["git", "status", "--porcelain"],
+                returncode=0,
+                stdout="",
+                stderr="",
+                success=True,
+            ),
             # git branch exists check - branch not found
             CommandResult(
                 command=["git", "branch", "--list", "gh-pages"],
@@ -529,6 +558,13 @@ class TestBranchPagesDeployer:
         mock_runner = MagicMock()
         mock_runner.run.side_effect = [
             CommandResult(
+                command=["git", "status", "--porcelain"],
+                returncode=0,
+                stdout="",
+                stderr="",
+                success=True,
+            ),
+            CommandResult(
                 command=["git", "branch", "--list", "gh-pages"],
                 returncode=0,
                 stdout="* gh-pages",
@@ -550,3 +586,36 @@ class TestBranchPagesDeployer:
         assert result.success is False
         assert result.command == ["git", "rev-parse", "--abbrev-ref", "HEAD"]
 
+    def test_branch_deploy_refuses_dirty_worktree(self, deploy_config: DeployConfig, tmp_path: Path) -> None:
+        deployer = BranchPagesDeployer(deploy_config, cwd=tmp_path)
+        site_dir = tmp_path / "site"
+        site_dir.mkdir()
+
+        mock_runner = MagicMock()
+        mock_runner.run.return_value = CommandResult(
+            command=["git", "status", "--porcelain"],
+            returncode=0,
+            stdout=" M README.md\n",
+            stderr="",
+            success=True,
+        )
+        deployer.runner = mock_runner
+
+        result = deployer.deploy(site_dir=site_dir)
+
+        assert result.success is False
+        assert "working tree has uncommitted changes" in result.stderr.lower()
+
+    def test_branch_get_deploy_url_infers_from_origin(self, deploy_config: DeployConfig, tmp_path: Path) -> None:
+        deployer = BranchPagesDeployer(deploy_config, cwd=tmp_path)
+        mock_runner = MagicMock()
+        mock_runner.run.return_value = CommandResult(
+            command=["git", "remote", "get-url", "origin"],
+            returncode=0,
+            stdout="git@github.com:Bullish-Design/bullish-ssg.git\n",
+            stderr="",
+            success=True,
+        )
+        deployer.runner = mock_runner
+
+        assert deployer.get_deploy_url() == "https://Bullish-Design.github.io/bullish-ssg/ (from gh-pages branch)"

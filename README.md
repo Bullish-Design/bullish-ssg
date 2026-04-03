@@ -8,6 +8,10 @@ Opinionated static-site tooling for Obsidian-first docs and blog publishing to G
 devenv shell -- uv sync --extra dev
 ```
 
+Required external tooling:
+- `kiln` must be installed and available in `PATH` for `build`/`serve` (non-dry-run).
+- `gh` must be installed and authenticated for live deploy.
+
 ## Commands
 
 - `bullish-ssg init`
@@ -87,3 +91,5 @@ In both modes, deploy runs preflight checks first:
 
 - Dry-run deploy still expects `deploy.site_dir` to exist.
 - Fixture-driven tests live in `tests/fixtures/` and integration coverage in `tests/integration/`.
+- Type checking uses Astral `ty` (`devenv shell -- ty check src`).
+- `integrations/` and `reporting/` are reserved extension modules and intentionally minimal in v0.1.

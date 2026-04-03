@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import frontmatter
 import yaml
@@ -22,29 +22,29 @@ class ParsedContent:
     relative_path: Path
     metadata: dict[str, Any]
     content: str
-    raw_frontmatter: Optional[str] = None
+    raw_frontmatter: str | None = None
 
     def get(self, key: str, default: Any = None) -> Any:
         """Get a metadata value by key."""
         return self.metadata.get(key, default)
 
     @property
-    def title(self) -> Optional[str]:
+    def title(self) -> str | None:
         """Get title from metadata."""
         return self.metadata.get("title")
 
     @property
-    def slug(self) -> Optional[str]:
+    def slug(self) -> str | None:
         """Get slug from metadata."""
         return self.metadata.get("slug")
 
     @property
-    def date(self) -> Optional[str]:
+    def date(self) -> str | None:
         """Get date from metadata."""
         return self.metadata.get("date")
 
     @property
-    def content_type(self) -> Optional[str]:
+    def content_type(self) -> str | None:
         """Get content type from metadata."""
         return self.metadata.get("type")
 
@@ -89,16 +89,18 @@ class FrontmatterParser:
             raise FrontmatterParseError(f"Failed to parse frontmatter in {file_path}: {e}") from e
 
         relative = file_path.relative_to(self.vault_path)
+        raw_frontmatter = post.metadata.get("_frontmatter")
+        raw_frontmatter_text = raw_frontmatter if isinstance(raw_frontmatter, str) else None
 
         return ParsedContent(
             path=file_path,
             relative_path=relative,
             metadata=dict(post.metadata),
             content=post.content,
-            raw_frontmatter=post.metadata.get("_frontmatter"),
+            raw_frontmatter=raw_frontmatter_text,
         )
 
-    def parse_safe(self, file_path: Path, default_metadata: Optional[dict[str, Any]] = None) -> ParsedContent:
+    def parse_safe(self, file_path: Path, default_metadata: dict[str, Any] | None = None) -> ParsedContent:
         """Parse frontmatter with safe defaults.
 
         Args:
@@ -152,7 +154,7 @@ class FrontmatterParser:
             return False
 
 
-def parse_frontmatter(file_path: Path, vault_path: Optional[Path] = None) -> ParsedContent:
+def parse_frontmatter(file_path: Path, vault_path: Path | None = None) -> ParsedContent:
     """Convenience function to parse a single file.
 
     Args:

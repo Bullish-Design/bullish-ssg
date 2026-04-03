@@ -1,20 +1,27 @@
 """Validation rules for content and configuration."""
 
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Iterator, Optional
+from typing import Any
 
 from bullish_ssg.config.schema import VaultConfig
 from bullish_ssg.content.discovery import ContentDiscovery
 from bullish_ssg.content.frontmatter import FrontmatterParseError, FrontmatterParser
+from bullish_ssg.validate.wikilinks import (
+    WikilinkParser,
+    WikilinkResolver,
+    build_page_index,
+    normalize_page_ref,
+)
 
 
 @dataclass
 class ValidationDiagnostic:
     """Represents a validation diagnostic."""
 
-    source_file: Optional[Path]
-    line_number: Optional[int]
+    source_file: Path | None
+    line_number: int | None
     message: str
     severity: str = "error"  # "error", "warning", or "info"
     rule: str = ""
@@ -175,7 +182,7 @@ class SymlinkValidator:
 class OrphanValidator:
     """Checks for orphaned pages (no incoming links)."""
 
-    def __init__(self, vault_path: Path, required_slugs: Optional[set[str]] = None) -> None:
+    def __init__(self, vault_path: Path, required_slugs: set[str] | None = None) -> None:
         self.vault_path = vault_path
         self.required_slugs = required_slugs or {"index"}
 
@@ -208,7 +215,7 @@ class OrphanValidator:
                         ValidationDiagnostic(
                             source_file=page,
                             line_number=None,
-                            message=f"Page has no incoming links (orphaned)",
+                            message="Page has no incoming links (orphaned)",
                             severity="info",
                             rule="orphan.page",
                         )
@@ -223,8 +230,8 @@ class ValidationRunner:
     def __init__(
         self,
         vault_path: Path,
-        vault_config: Optional[VaultConfig] = None,
-        ignore_patterns: Optional[list[str]] = None,
+        vault_config: VaultConfig | None = None,
+        ignore_patterns: list[str] | None = None,
     ) -> None:
         self.vault_path = vault_path
         self.vault_config = vault_config
@@ -361,16 +368,6 @@ class ValidationRunner:
             diagnostics=diagnostics,
         )
 
-
-# Import here to avoid circular imports
-from bullish_ssg.validate.wikilinks import (
-    WikilinkParser,
-    WikilinkResolver,
-    build_page_index,
-    normalize_page_ref,
-)
-
-
 class WikilinkValidator:
     """Validates wikilinks across the vault."""
 
@@ -378,7 +375,7 @@ class WikilinkValidator:
         self,
         vault_path: Path,
         fail_on_broken: bool = True,
-        ignore_patterns: Optional[list[str]] = None,
+        ignore_patterns: list[str] | None = None,
     ) -> None:
         self.vault_path = vault_path
         self.fail_on_broken = fail_on_broken

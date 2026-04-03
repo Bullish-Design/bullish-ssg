@@ -27,6 +27,7 @@ devenv shell -- uv sync --extra dev
 ```bash
 devenv shell -- pytest tests/unit/test_lsp_graph.py -v
 devenv shell -- ruff check src/
+devenv shell -- ty check src
 devenv shell -- uv sync --extra dev
 ```
 For scripts/tests/tooling, never run `python`, `pytest`, `uv run`, or similar directly from system PATH.
@@ -65,5 +66,3 @@ All packages in `pyproject.toml` `[project.dependencies]` are hard dependencies:
 ```
 devenv shell -- python -m pytest tests/ --ignore=tests/benchmarks --ignore=tests/integration/cairn -q
 ```
-
-

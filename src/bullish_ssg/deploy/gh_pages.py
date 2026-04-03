@@ -1,9 +1,9 @@
 """GitHub Pages deployment adapter."""
 
 from pathlib import Path
-from typing import Optional
 
 from bullish_ssg.config.schema import DeployConfig
+from bullish_ssg.deploy.url import infer_pages_url
 from bullish_ssg.render.kiln import CommandResult, SubprocessRunner
 
 
@@ -13,7 +13,7 @@ class GHPagesDeployer:
     def __init__(
         self,
         config: DeployConfig,
-        runner: Optional[SubprocessRunner] = None,
+        runner: SubprocessRunner | None = None,
     ) -> None:
         """Initialize GitHub Pages deployer.
 
@@ -67,5 +67,9 @@ class GHPagesDeployer:
         Returns:
             URL where site will be deployed
         """
-        # gh pages deploy typically uses the repo's GitHub Pages URL
-        return "https://<owner>.github.io/<repo>/"
+        remote_result = self.runner.run(["git", "remote", "get-url", "origin"])
+        if remote_result.success:
+            inferred = infer_pages_url(remote_result.stdout)
+            if inferred is not None:
+                return inferred
+        return "GitHub Pages URL (set in repository Pages settings)"

@@ -5,10 +5,15 @@
   env.GREET = "devenv";
 
   # https://devenv.sh/packages/
-  packages = [ 
-    pkgs.git 
+  packages = [
+    pkgs.git
     pkgs.uv
-    ];
+    (inputs.kiln.packages.${pkgs.system}.default.overrideAttrs (_: {
+      # v0.9.5 flake ships a stale go modules hash; override to keep release pin usable.
+      vendorHash = "sha256-HL4H+HOVHu7H71V7t4bjWBcquaimuh/GkPnuwPiuZ0A=";
+      doCheck = false;
+    }))
+  ];
 
   # https://devenv.sh/languages/
   # languages.rust.enable = true;
@@ -31,6 +36,7 @@
   scripts.hello.exec = ''
     echo hello from $GREET
   '';
+  scripts."bullish-ssg-validate".exec = "bullish-ssg validate";
 
   enterShell = ''
     hello
@@ -38,10 +44,9 @@
   '';
 
   # https://devenv.sh/tasks/
-  # tasks = {
-  #   "myproj:setup".exec = "mytool build";
-  #   "devenv:enterShell".after = [ "myproj:setup" ];
-  # };
+  tasks = {
+    "bullish-ssg:validate".exec = "bullish-ssg validate";
+  };
 
   # https://devenv.sh/tests/
   enterTest = ''

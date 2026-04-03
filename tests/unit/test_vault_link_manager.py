@@ -88,6 +88,15 @@ class TestVaultLinkManagerRepair:
         assert manager.repair() is True
         assert (tmp_path / "docs").is_symlink()
 
+    def test_repair_non_symlink_path_raises(self, fixture_copy: callable, tmp_path: Path) -> None:
+        source = fixture_copy("vault/source_vault")
+        docs = tmp_path / "docs"
+        docs.mkdir()
+
+        manager = VaultLinkManager(source, Path("docs"), tmp_path)
+        with pytest.raises(SymlinkError):
+            manager.repair()
+
 
 class TestVaultLinkManagerStatus:
     def test_status_valid_symlink(self, fixture_copy: callable, tmp_path: Path) -> None:
@@ -101,3 +110,55 @@ class TestVaultLinkManagerStatus:
         assert status["is_symlink"] is True
         assert status["target_exists"] is True
         assert status["is_valid"] is True
+
+    def test_status_missing_link(self, fixture_copy: callable, tmp_path: Path) -> None:
+        source = fixture_copy("vault/source_vault")
+        manager = VaultLinkManager(source, Path("docs"), tmp_path)
+        status = manager.status()
+
+        assert status["exists"] is False
+        assert status["is_symlink"] is False
+        assert status["is_valid"] is False
+
+    def test_status_broken_symlink(self, fixture_copy: callable, tmp_path: Path) -> None:
+        source = fixture_copy("vault/source_vault")
+        link = tmp_path / "docs"
+        link.symlink_to(source)
+        (source / "index.md").unlink()
+        source.rmdir()
+
+        replacement = tmp_path / "replacement"
+        replacement.mkdir()
+        manager = VaultLinkManager(replacement, Path("docs"), tmp_path)
+        status = manager.status()
+
+        assert status["exists"] is True
+        assert status["is_symlink"] is True
+        assert status["target_exists"] is False
+        assert status["is_valid"] is False
+
+
+class TestVaultLinkManagerRemove:
+    def test_remove_symlink(self, fixture_copy: callable, tmp_path: Path) -> None:
+        source = fixture_copy("vault/source_vault")
+        link = tmp_path / "docs"
+        link.symlink_to(source)
+        manager = VaultLinkManager(source, Path("docs"), tmp_path)
+
+        assert manager.remove() is True
+        assert not link.exists()
+        assert not link.is_symlink()
+
+    def test_remove_nonexistent_returns_false(self, fixture_copy: callable, tmp_path: Path) -> None:
+        source = fixture_copy("vault/source_vault")
+        manager = VaultLinkManager(source, Path("docs"), tmp_path)
+        assert manager.remove() is False
+
+    def test_remove_non_symlink_raises(self, fixture_copy: callable, tmp_path: Path) -> None:
+        source = fixture_copy("vault/source_vault")
+        docs = tmp_path / "docs"
+        docs.mkdir()
+        manager = VaultLinkManager(source, Path("docs"), tmp_path)
+
+        with pytest.raises(SymlinkError):
+            manager.remove()

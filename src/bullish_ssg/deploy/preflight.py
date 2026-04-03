@@ -2,7 +2,6 @@
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
 
 from bullish_ssg.config.schema import BullishConfig
 from bullish_ssg.render.kiln import KilnAdapter
@@ -28,8 +27,8 @@ class DeployPreflight:
     def __init__(
         self,
         config: BullishConfig,
-        cwd: Optional[Path] = None,
-        kiln_adapter: Optional[KilnAdapter] = None,
+        cwd: Path | None = None,
+        kiln_adapter: KilnAdapter | None = None,
     ) -> None:
         """Initialize preflight checker.
 
@@ -42,7 +41,7 @@ class DeployPreflight:
         self.cwd = cwd or Path.cwd()
         self.kiln = kiln_adapter or KilnAdapter()
         self.errors: list[str] = []
-        self.vault_path: Optional[Path] = None
+        self.vault_path: Path | None = None
 
     def run(self, dry_run: bool = False) -> PreflightResult:
         """Run all preflight checks.
