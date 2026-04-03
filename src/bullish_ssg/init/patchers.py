@@ -8,59 +8,15 @@ from typing import Any
 
 import toml
 
+from bullish_ssg.init.templates import render_default_config, render_devenv_snippet, render_precommit_hook
 
-DEFAULT_CONFIG: dict[str, Any] = {
-    "site": {
-        "name": "My Bullish Site",
-        "url": "http://localhost:8000/",
-    },
-    "content": {
-        "source_dir": "docs",
-        "output_dir": "site",
-        "ignore_patterns": [".obsidian/**", "templates/**", "_drafts/**"],
-        "blog_dirs": ["blog", "posts"],
-        "default_type": "doc",
-    },
-    "vault": {
-        "mode": "direct",
-        "link_path": "docs",
-    },
-    "validation": {
-        "require_date_for_posts": True,
-        "fail_on_broken_links": True,
-        "check_heading_anchors": True,
-    },
-    "deploy": {
-        "method": "gh-pages",
-        "site_dir": "site",
-        "branch": "main",
-        "pages_branch": "gh-pages",
-    },
-    "hooks": {},
-}
+DEFAULT_CONFIG: dict[str, Any] = toml.loads(render_default_config())
 
 DEFAULT_DOCS_INDEX = "# Welcome\n\nThis site is managed by bullish-ssg.\n"
 
 REQUIRED_GITIGNORE_LINES = [
     "site/",
 ]
-
-PRECOMMIT_BLOCK = """\
-- repo: local
-  hooks:
-    - id: bullish-ssg-validate
-      name: bullish-ssg validate
-      entry: bullish-ssg validate
-      language: system
-      pass_filenames: false
-"""
-
-DEVENV_BLOCK = """\
-  # >>> bullish-ssg >>>
-  scripts."bullish-ssg-validate".exec = "bullish-ssg validate";
-  tasks."bullish-ssg:validate".exec = "bullish-ssg validate";
-  # <<< bullish-ssg <<<
-"""
 
 DEFAULT_DEVENV = """\
 { pkgs, ... }:
@@ -126,8 +82,9 @@ def ensure_gitignore(repo_root: Path, dry_run: bool) -> list[PatchChange]:
 def ensure_precommit(repo_root: Path, dry_run: bool) -> list[PatchChange]:
     """Ensure pre-commit local validation hook exists."""
     path = repo_root / ".pre-commit-config.yaml"
+    hook_block = render_precommit_hook()
     if not path.exists():
-        content = "repos:\n" + PRECOMMIT_BLOCK
+        content = "repos:\n" + hook_block
         if not dry_run:
             path.write_text(content, encoding="utf-8")
         return [PatchChange(path=path, action="create", detail="Created pre-commit config with bullish-ssg hook")]
@@ -142,7 +99,7 @@ def ensure_precommit(repo_root: Path, dry_run: bool) -> list[PatchChange]:
         updated = text
         if not updated.endswith("\n"):
             updated += "\n"
-        updated += PRECOMMIT_BLOCK
+        updated += hook_block
     if not dry_run:
         path.write_text(updated, encoding="utf-8")
     return [PatchChange(path=path, action="update", detail="Added bullish-ssg pre-commit hook")]
@@ -181,6 +138,7 @@ def ensure_docs_index(repo_root: Path, dry_run: bool) -> list[PatchChange]:
 
 def _insert_devenv_block(text: str) -> str:
     """Insert devenv snippet before final root brace."""
+    devenv_block = render_devenv_snippet()
     marker = "# >>> bullish-ssg >>>"
     if marker in text:
         return text
@@ -189,13 +147,13 @@ def _insert_devenv_block(text: str) -> str:
     if idx == -1:
         if text and not text.endswith("\n"):
             text += "\n"
-        return text + DEVENV_BLOCK
+        return text + devenv_block
 
     prefix = text[:idx]
     suffix = text[idx:]
     if not prefix.endswith("\n"):
         prefix += "\n"
-    return prefix + DEVENV_BLOCK + suffix
+    return prefix + devenv_block + suffix
 
 
 def _deep_merge(base: dict[str, Any], defaults: dict[str, Any]) -> dict[str, Any]:

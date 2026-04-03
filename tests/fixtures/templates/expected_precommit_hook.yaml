@@ -1,0 +1,7 @@
+- repo: local
+  hooks:
+    - id: bullish-ssg-validate
+      name: bullish-ssg validate
+      entry: bullish-ssg validate
+      language: system
+      pass_filenames: false
